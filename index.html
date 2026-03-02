@@ -1,19 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DND Character Manager</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-<style>
-body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
-input { width: 60px; margin-right: 5px; }
-button { margin-top: 10px; margin-right: 5px; }
-.section { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fff; }
-</style>
-</head>
 <body>
-
 <h1>DND Character Manager</h1>
 
 <div class="section">
@@ -32,18 +17,20 @@ button { margin-top: 10px; margin-right: 5px; }
 <label>WIS: <input id="wis" type="number" value="10"></label>
 <label>CHA: <input id="cha" type="number" value="10"></label><br>
 
-<button onclick="saveCharacter()">Save Character</button>
+<button id="saveChar">Save Character</button>
 </div>
 
 <div class="section">
 <h2>DM Mode (View Characters)</h2>
 <label>Password: <input id="dmPass" type="password"></label>
-<button onclick="loadCharacters()">Load Characters</button>
+<button id="loadChars">Load Characters</button>
 <div id="dmView"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 <script>
-// --- Supabase Setup ---
+window.onload = function() {
+
 const SUPABASE_URL = "https://17499.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aW5mb3d0bW52b2tiaWFnZWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MjEyMzksImV4cCI6MjA4Nzk5NzIzOX0.HfAOOZInsu7-xx84AGp0NvOeCaYpNngRG0UKdQIj1Ao";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -71,17 +58,14 @@ async function saveCharacter() {
         }])
         .select();
 
-    if (error) {
-        alert("Error: " + error.message);
-    } else {
-        alert("Character saved!");
-    }
+    if (error) alert("Error: " + error.message);
+    else alert("Character saved!");
 }
 
 // --- Load Characters for DM ---
 async function loadCharacters() {
     const pass = document.getElementById("dmPass").value;
-    if (pass !== "dmsecret123") { // change to your chosen password
+    if (pass !== "dmsecret123") { 
         alert("Wrong password!");
         return;
     }
@@ -90,13 +74,10 @@ async function loadCharacters() {
         .from("characters")
         .select("*");
 
-    if (error) {
-        alert("Error: " + error.message);
-        return;
-    }
+    if (error) { alert("Error: " + error.message); return; }
 
     const container = document.getElementById("dmView");
-    container.innerHTML = ""; // clear previous
+    container.innerHTML = "";
 
     data.forEach(c => {
         const div = document.createElement("div");
@@ -111,7 +92,10 @@ async function loadCharacters() {
         container.appendChild(div);
     });
 }
-</script>
 
-</body>
-</html>
+// --- Attach to buttons ---
+document.getElementById("saveChar").onclick = saveCharacter;
+document.getElementById("loadChars").onclick = loadCharacters;
+
+};
+</script>
