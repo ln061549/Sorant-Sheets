@@ -1,40 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>DND Control Panel</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <title>DND Campaign Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #eee;
+      padding: 20px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+    }
+    button:hover {
+      background-color: #666;
+    }
+    .card {
+      background: #1e1e1e;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Character Creator</h1>
+<h1>DND Campaign Manager</h1>
 
-<input id="player" placeholder="Player Name"><br><br>
-<input id="name" placeholder="Character Name"><br><br>
-<input id="class" placeholder="Class"><br><br>
-<input id="level" type="number" placeholder="Level"><br><br>
+<button onclick="showPlayer()">Player Mode</button>
+<button onclick="showDM()">DM Mode</button>
 
-<button onclick="saveCharacter()">Save Character</button>
+<div id="playerSection" style="display:none;">
+  <h2>Create Character</h2>
+
+  <input id="player" placeholder="Player Name"><br>
+  <input id="name" placeholder="Character Name"><br>
+  <input id="class" placeholder="Class"><br>
+  <input id="race" placeholder="Race"><br>
+  <input id="level" type="number" placeholder="Level"><br>
+
+  <h3>Stats</h3>
+  <input id="str" type="number" placeholder="STR">
+  <input id="dex" type="number" placeholder="DEX">
+  <input id="con" type="number" placeholder="CON">
+  <input id="int" type="number" placeholder="INT">
+  <input id="wis" type="number" placeholder="WIS">
+  <input id="cha" type="number" placeholder="CHA"><br>
+
+  <button onclick="saveCharacter()">Save Character</button>
+</div>
+
+<div id="dmSection" style="display:none;">
+  <h2>All Characters</h2>
+  <button onclick="loadCharacters()">Refresh List</button>
+  <div id="characterList"></div>
+</div>
 
 <script>
   const supabaseClient = supabase.createClient(
-    "https://ytinfowtmnvokbiageer.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aW5mb3d0bW52b2tiaWFnZWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MjEyMzksImV4cCI6MjA4Nzk5NzIzOX0.HfAOOZInsu7-xx84AGp0NvOeCaYpNngRG0UKdQIj1Ao"
+    "YOUR_PROJECT_URL",
+    "YOUR_ANON_KEY"
   );
 
-  async function saveCharacter() {
-    const player = document.getElementById("player").value;
-    const name = document.getElementById("name").value;
-    const charClass = document.getElementById("class").value;
-    const level = parseInt(document.getElementById("level").value);
+  function showPlayer() {
+    document.getElementById("playerSection").style.display = "block";
+    document.getElementById("dmSection").style.display = "none";
+  }
 
-    const { data, error } = await supabaseClient
+  function showDM() {
+    document.getElementById("playerSection").style.display = "none";
+    document.getElementById("dmSection").style.display = "block";
+  }
+
+  async function saveCharacter() {
+    const stats = {
+      STR: parseInt(document.getElementById("str").value),
+      DEX: parseInt(document.getElementById("dex").value),
+      CON: parseInt(document.getElementById("con").value),
+      INT: parseInt(document.getElementById("int").value),
+      WIS: parseInt(document.getElementById("wis").value),
+      CHA: parseInt(document.getElementById("cha").value),
+    };
+
+    const { error } = await supabaseClient
       .from("characters")
       .insert([
         {
-          player_name: player,
-          character_name: name,
-          class: charClass,
-          level: level
+          player_name: document.getElementById("player").value,
+          character_name: document.getElementById("name").value,
+          class: document.getElementById("class").value,
+          race: document.getElementById("race").value,
+          level: parseInt(document.getElementById("level").value),
+          stats: stats
         }
       ]);
 
@@ -43,6 +109,40 @@
     } else {
       alert("Character saved!");
     }
+  }
+
+  async function loadCharacters() {
+    const { data, error } = await supabaseClient
+      .from("characters")
+      .select("*");
+
+    if (error) {
+      alert("Error loading characters: " + error.message);
+      return;
+    }
+
+    const list = document.getElementById("characterList");
+    list.innerHTML = "";
+
+    data.forEach(char => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <strong>${char.character_name}</strong><br>
+        Player: ${char.player_name}<br>
+        Class: ${char.class}<br>
+        Race: ${char.race}<br>
+        Level: ${char.level}<br>
+        <br>
+        STR: ${char.stats?.STR ?? "-"} |
+        DEX: ${char.stats?.DEX ?? "-"} |
+        CON: ${char.stats?.CON ?? "-"} |
+        INT: ${char.stats?.INT ?? "-"} |
+        WIS: ${char.stats?.WIS ?? "-"} |
+        CHA: ${char.stats?.CHA ?? "-"}
+      `;
+      list.appendChild(div);
+    });
   }
 </script>
 
