@@ -1,157 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-  <title>DND Campaign Manager</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #111;
-      color: #eee;
-      padding: 20px;
-    }
-    input, button {
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 6px;
-      border: none;
-    }
-    button {
-      cursor: pointer;
-      background-color: #444;
-      color: white;
-    }
-    button:hover {
-      background-color: #666;
-    }
-    .card {
-      background: #1e1e1e;
-      padding: 15px;
-      margin-top: 10px;
-      border-radius: 8px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DND Character Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<style>
+body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
+input { width: 60px; margin-right: 5px; }
+button { margin-top: 10px; margin-right: 5px; }
+.section { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fff; }
+</style>
 </head>
 <body>
 
-<h1>DND Campaign Manager</h1>
+<h1>DND Character Manager</h1>
 
-<button onclick="showPlayer()">Player Mode</button>
-<button onclick="showDM()">DM Mode</button>
+<div class="section">
+<h2>Player Character Input</h2>
+<label>Player Name: <input id="player" type="text"></label><br>
+<label>Character Name: <input id="name" type="text"></label><br>
+<label>Class: <input id="class" type="text"></label><br>
+<label>Race: <input id="race" type="text"></label><br>
+<label>Level: <input id="level" type="number" value="1"></label><br>
 
-<div id="playerSection" style="display:none;">
-  <h2>Create Character</h2>
+<h3>Stats</h3>
+<label>STR: <input id="str" type="number" value="10"></label>
+<label>DEX: <input id="dex" type="number" value="10"></label>
+<label>CON: <input id="con" type="number" value="10"></label><br>
+<label>INT: <input id="int" type="number" value="10"></label>
+<label>WIS: <input id="wis" type="number" value="10"></label>
+<label>CHA: <input id="cha" type="number" value="10"></label><br>
 
-  <input id="player" placeholder="Player Name"><br>
-  <input id="name" placeholder="Character Name"><br>
-  <input id="class" placeholder="Class"><br>
-  <input id="race" placeholder="Race"><br>
-  <input id="level" type="number" placeholder="Level"><br>
+<button onclick="saveCharacter()">Save Character</button>
+</div>
 
-  <h3>Stats</h3>
-  <input id="str" type="number" placeholder="STR">
-  <input id="dex" type="number" placeholder="DEX">
-  <input id="con" type="number" placeholder="CON">
-  <input id="int" type="number" placeholder="INT">
-  <input id="wis" type="number" placeholder="WIS">
-  <input id="cha" type="number" placeholder="CHA"><br>
+<div class="section">
+<h2>DM Mode (View Characters)</h2>
+<label>Password: <input id="dmPass" type="password"></label>
+<button onclick="loadCharacters()">Load Characters</button>
+<div id="dmView"></div>
+</div>
 
 <script>
-const SUPABASE_URL = "https://17499.supabase.co";  // replace with your project URL
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aW5mb3d0bW52b2tiaWFnZWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MjEyMzksImV4cCI6MjA4Nzk5NzIzOX0.HfAOOZInsu7-xx84AGp0NvOeCaYpNngRG0UKdQIj1Ao";            // replace with your anon key
-
+// --- Supabase Setup ---
+const SUPABASE_URL = "https://17499.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aW5mb3d0bW52b2tiaWFnZWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MjEyMzksImV4cCI6MjA4Nzk5NzIzOX0.HfAOOZInsu7-xx84AGp0NvOeCaYpNngRG0UKdQIj1Ao";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-</script>
-  
-  <button onclick="saveCharacter()">Save Character</button>
-</div>
 
-<div id="dmSection" style="display:none;">
-  <h2>All Characters</h2>
-  <button onclick="loadCharacters()">Refresh List</button>
-  <div id="characterList"></div>
-</div>
-
-<script>
-  const supabaseClient = supabase.createClient(
-    "YOUR_PROJECT_URL",
-    "YOUR_ANON_KEY"
-  );
-
-  function showPlayer() {
-    document.getElementById("playerSection").style.display = "block";
-    document.getElementById("dmSection").style.display = "none";
-  }
-
-  function showDM() {
-    document.getElementById("playerSection").style.display = "none";
-    document.getElementById("dmSection").style.display = "block";
-  }
-
-  async function saveCharacter() {
+// --- Save Character ---
+async function saveCharacter() {
     const stats = {
-      STR: parseInt(document.getElementById("str").value),
-      DEX: parseInt(document.getElementById("dex").value),
-      CON: parseInt(document.getElementById("con").value),
-      INT: parseInt(document.getElementById("int").value),
-      WIS: parseInt(document.getElementById("wis").value),
-      CHA: parseInt(document.getElementById("cha").value),
+        STR: parseInt(document.getElementById("str").value),
+        DEX: parseInt(document.getElementById("dex").value),
+        CON: parseInt(document.getElementById("con").value),
+        INT: parseInt(document.getElementById("int").value),
+        WIS: parseInt(document.getElementById("wis").value),
+        CHA: parseInt(document.getElementById("cha").value)
     };
 
-    const { error } = await supabaseClient
-      .from("characters")
-      .insert([
-        {
-          player_name: document.getElementById("player").value,
-          character_name: document.getElementById("name").value,
-          class: document.getElementById("class").value,
-          race: document.getElementById("race").value,
-          level: parseInt(document.getElementById("level").value),
-          stats: stats
-        }
-      ]);
-
-    if (error) {
-      alert("Error: " + error.message);
-    } else {
-      alert("Character saved!");
-    }
-  }
-
-  async function loadCharacters() {
     const { data, error } = await supabaseClient
-      .from("characters")
-      .select("*");
+        .from("characters")
+        .insert([{
+            player_name: document.getElementById("player").value,
+            character_name: document.getElementById("name").value,
+            class: document.getElementById("class").value,
+            race: document.getElementById("race").value,
+            level: parseInt(document.getElementById("level").value),
+            stats: stats
+        }])
+        .select();
 
     if (error) {
-      alert("Error loading characters: " + error.message);
-      return;
+        alert("Error: " + error.message);
+    } else {
+        alert("Character saved!");
+    }
+}
+
+// --- Load Characters for DM ---
+async function loadCharacters() {
+    const pass = document.getElementById("dmPass").value;
+    if (pass !== "dmsecret123") { // change to your chosen password
+        alert("Wrong password!");
+        return;
     }
 
-    const list = document.getElementById("characterList");
-    list.innerHTML = "";
+    const { data, error } = await supabaseClient
+        .from("characters")
+        .select("*");
 
-    data.forEach(char => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <strong>${char.character_name}</strong><br>
-        Player: ${char.player_name}<br>
-        Class: ${char.class}<br>
-        Race: ${char.race}<br>
-        Level: ${char.level}<br>
-        <br>
-        STR: ${char.stats?.STR ?? "-"} |
-        DEX: ${char.stats?.DEX ?? "-"} |
-        CON: ${char.stats?.CON ?? "-"} |
-        INT: ${char.stats?.INT ?? "-"} |
-        WIS: ${char.stats?.WIS ?? "-"} |
-        CHA: ${char.stats?.CHA ?? "-"}
-      `;
-      list.appendChild(div);
+    if (error) {
+        alert("Error: " + error.message);
+        return;
+    }
+
+    const container = document.getElementById("dmView");
+    container.innerHTML = ""; // clear previous
+
+    data.forEach(c => {
+        const div = document.createElement("div");
+        div.style.border = "1px solid #000";
+        div.style.margin = "5px";
+        div.style.padding = "5px";
+        div.innerHTML = `
+            <b>${c.character_name}</b> (Player: ${c.player_name})<br>
+            Class: ${c.class}, Race: ${c.race}, Level: ${c.level}<br>
+            Stats: STR ${c.stats.STR}, DEX ${c.stats.DEX}, CON ${c.stats.CON}, INT ${c.stats.INT}, WIS ${c.stats.WIS}, CHA ${c.stats.CHA}
+        `;
+        container.appendChild(div);
     });
-  }
+}
 </script>
 
 </body>
