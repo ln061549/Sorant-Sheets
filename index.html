@@ -1,136 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>DND Character Manager</title>
-    <style>
-body {
-    background-color: #121212;
-    color: #e0e0e0;
-    font-family: Arial, sans-serif;
-}
-
-input, button {
-    background-color: #1e1e1e;
-    color: #e0e0e0;
-    border: 1px solid #444;
-    padding: 5px;
-    margin: 3px;
-    border-radius: 3px;
-}
-
-button:hover {
-    background-color: #333;
-    cursor: pointer;
-}
-
-.section {
-    border: 1px solid #444;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-}
-
-h1, h2, h3 {
-    color: #fff;
-}
-</style>    
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DND Table App</title>
+<style>
+  body { background-color: #121212; color: #eee; font-family: sans-serif; padding: 20px; }
+  input, button { margin: 5px 0; padding: 5px; }
+  #login-section, #main-menu { margin-top: 20px; }
+</style>
 </head>
 <body>
-<h1>DND Character Manager</h1>
 
-<div class="section">
-<h2>Player Character Input</h2>
-<label>Player Name: <input id="player" type="text"></label><br>
-<label>Character Name: <input id="name" type="text"></label><br>
-<label>Class: <input id="class" type="text"></label><br>
-<label>Race: <input id="race" type="text"></label><br>
-<label>Level: <input id="level" type="number" value="1"></label><br>
+<h1>DND Table Manager</h1>
 
-<h3>Stats</h3>
-<label>STR: <input id="str" type="number" value="10"></label>
-<label>DEX: <input id="dex" type="number" value="10"></label>
-<label>CON: <input id="con" type="number" value="10"></label><br>
-<label>INT: <input id="int" type="number" value="10"></label>
-<label>WIS: <input id="wis" type="number" value="10"></label>
-<label>CHA: <input id="cha" type="number" value="10"></label><br>
-
-<button id="saveChar">Save Character</button>
+<div id="login-section">
+  <h2>Login / Register</h2>
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <br>
+  <button id="login-btn">Login</button>
+  <button id="register-btn">Register</button>
+  <p id="login-msg"></p>
 </div>
 
-<div class="section">
-<h2>DM Mode (View Characters)</h2>
-<label>Password: <input id="dmPass" type="password"></label>
-<button id="loadChars">Load Characters</button>
-<div id="dmView"></div>
+<div id="main-menu" style="display:none;">
+  <h2>Main Menu</h2>
+  <p id="welcome-msg"></p>
+  <button id="player-mode-btn">Player Mode</button>
+  <button id="dm-mode-btn">DM Mode</button>
+  <button id="logout-btn">Logout</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<div id="player-section" style="display:none;">
+  <h2>Player Character Sheet</h2>
+  <button id="load-character-btn">Load My Character</button>
+  <div id="character-sheet"></div>
+  <button id="back-to-menu-player">Back to Main Menu</button>
+</div>
+
+<div id="dm-section" style="display:none;">
+  <h2>DM View</h2>
+  <button id="load-all-btn">Load All Characters</button>
+  <div id="all-sheets"></div>
+  <button id="back-to-menu-dm">Back to Main Menu</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-window.onload = function() {
+// -------------------------
+// 1. Connect to Supabase
+// -------------------------
+const SUPABASE_URL = "YOUR_PROJECT_URL"; // replace with your project URL
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // replace with your anon key
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const SUPABASE_URL = "https://17499.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aW5mb3d0bW52b2tiaWFnZWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MjEyMzksImV4cCI6MjA4Nzk5NzIzOX0.HfAOOZInsu7-xx84AGp0NvOeCaYpNngRG0UKdQIj1Ao";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// -------------------------
+// 2. DOM Elements
+// -------------------------
+const loginSection = document.getElementById("login-section");
+const mainMenu = document.getElementById("main-menu");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const loginMsg = document.getElementById("login-msg");
+const welcomeMsg = document.getElementById("welcome-msg");
 
-// --- Save Character ---
-async function saveCharacter() {
-    const stats = {
-        STR: parseInt(document.getElementById("str").value),
-        DEX: parseInt(document.getElementById("dex").value),
-        CON: parseInt(document.getElementById("con").value),
-        INT: parseInt(document.getElementById("int").value),
-        WIS: parseInt(document.getElementById("wis").value),
-        CHA: parseInt(document.getElementById("cha").value)
-    };
+const playerSection = document.getElementById("player-section");
+const characterDiv = document.getElementById("character-sheet");
 
-    const { data, error } = await supabaseClient
-        .from("characters")
-        .insert([{
-            player_name: document.getElementById("player").value,
-            character_name: document.getElementById("name").value,
-            class: document.getElementById("class").value,
-            race: document.getElementById("race").value,
-            level: parseInt(document.getElementById("level").value),
-            stats: stats
-        }])
-        .select();
+const dmSection = document.getElementById("dm-section");
+const allSheetsDiv = document.getElementById("all-sheets");
 
-    if (error) alert("Error: " + error.message);
-    else alert("Character saved!");
+// -------------------------
+// 3. Login & Register
+// -------------------------
+document.getElementById("login-btn").onclick = async () => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: emailInput.value,
+    password: passwordInput.value
+  });
+  if (error) {
+    loginMsg.innerText = "Login failed: " + error.message;
+  } else {
+    loginMsg.innerText = "Login successful!";
+    showMainMenu(data.user);
+  }
+};
+
+document.getElementById("register-btn").onclick = async () => {
+  const { data, error } = await supabase.auth.signUp({
+    email: emailInput.value,
+    password: passwordInput.value
+  });
+  if (error) {
+    loginMsg.innerText = "Registration failed: " + error.message;
+  } else {
+    loginMsg.innerText = "Registered! Check your email to confirm.";
+  }
+};
+
+// -------------------------
+// 4. Show Main Menu
+// -------------------------
+function showMainMenu(user) {
+  loginSection.style.display = "none";
+  mainMenu.style.display = "block";
+  welcomeMsg.innerText = `Welcome, ${user.email}`;
 }
 
-// --- Load Characters for DM ---
-async function loadCharacters() {
-    const pass = document.getElementById("dmPass").value;
-    if (pass !== "dmsecret123") { 
-        alert("Wrong password!");
-        return;
-    }
+// -------------------------
+// 5. Logout
+// -------------------------
+document.getElementById("logout-btn").onclick = async () => {
+  await supabase.auth.signOut();
+  loginSection.style.display = "block";
+  mainMenu.style.display = "none";
+};
 
-    const { data, error } = await supabaseClient
-        .from("characters")
-        .select("*");
+// -------------------------
+// 6. Player Mode
+// -------------------------
+document.getElementById("player-mode-btn").onclick = () => {
+  mainMenu.style.display = "none";
+  playerSection.style.display = "block";
+};
 
-    if (error) { alert("Error: " + error.message); return; }
+document.getElementById("back-to-menu-player").onclick = () => {
+  playerSection.style.display = "none";
+  mainMenu.style.display = "block";
+};
 
-    const container = document.getElementById("dmView");
-    container.innerHTML = "";
+// Load player's character
+document.getElementById("load-character-btn").onclick = async () => {
+  const user = supabase.auth.getUser();
+  const { data, error } = await supabase.from("characters").select("*").eq("user_id", (await user).data.user.id).single();
+  if (error) {
+    characterDiv.innerText = "No character sheet found.";
+  } else {
+    characterDiv.innerText = JSON.stringify(data, null, 2);
+  }
+};
 
-    data.forEach(c => {
-        const div = document.createElement("div");
-        div.style.border = "1px solid #000";
-        div.style.margin = "5px";
-        div.style.padding = "5px";
-        div.innerHTML = `
-            <b>${c.character_name}</b> (Player: ${c.player_name})<br>
-            Class: ${c.class}, Race: ${c.race}, Level: ${c.level}<br>
-            Stats: STR ${c.stats.STR}, DEX ${c.stats.DEX}, CON ${c.stats.CON}, INT ${c.stats.INT}, WIS ${c.stats.WIS}, CHA ${c.stats.CHA}
-        `;
-        container.appendChild(div);
-    });
-}
+// -------------------------
+// 7. DM Mode
+// -------------------------
+document.getElementById("dm-mode-btn").onclick = () => {
+  mainMenu.style.display = "none";
+  dmSection.style.display = "block";
+};
 
-// --- Attach to buttons ---
-document.getElementById("saveChar").onclick = saveCharacter;
-document.getElementById("loadChars").onclick = loadCharacters;
+document.getElementById("back-to-menu-dm").onclick = () => {
+  dmSection.style.display = "none";
+  mainMenu.style.display = "block";
+};
 
+// Load all characters
+document.getElementById("load-all-btn").onclick = async () => {
+  const { data, error } = await supabase.from("characters").select("*");
+  if (error) {
+    allSheetsDiv.innerText = "Failed to load characters: " + error.message;
+  } else {
+    allSheetsDiv.innerText = JSON.stringify(data, null, 2);
+  }
 };
 </script>
+</body>
+</html>
