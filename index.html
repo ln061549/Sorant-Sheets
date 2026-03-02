@@ -1,168 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DND Table App</title>
-<style>
-  body { background-color: #121212; color: #eee; font-family: sans-serif; padding: 20px; }
-  input, button { margin: 5px 0; padding: 5px; }
-  #login-section, #main-menu { margin-top: 20px; }
-</style>
+  <meta charset="UTF-8">
+  <title>D&D Character Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+    input, button, select {
+      margin: 5px 0;
+      padding: 5px;
+    }
+    .hidden {
+      display: none;
+    }
+    .menu, .character, #dm-menu {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      background-color: #2c2c2c;
+    }
+    h2 {
+      color: #f0a500;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 </head>
 <body>
 
-<h1>DND Table Manager</h1>
+  <h1>D&D Character Manager</h1>
 
-<div id="login-section">
-  <h2>Login / Register</h2>
-  <input id="email" type="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <br>
-  <button id="login-btn">Login</button>
-  <button id="register-btn">Register</button>
-  <p id="login-msg"></p>
-</div>
+  <!-- Login/Register -->
+  <div id="auth-section">
+    <h2>Login / Register</h2>
+    <input type="email" id="email" placeholder="Email"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button id="register-btn">Register</button>
+    <button id="login-btn">Login</button>
+    <p id="auth-msg"></p>
+  </div>
 
-<div id="main-menu" style="display:none;">
-  <h2>Main Menu</h2>
-  <p id="welcome-msg"></p>
-  <button id="player-mode-btn">Player Mode</button>
-  <button id="dm-mode-btn">DM Mode</button>
-  <button id="logout-btn">Logout</button>
-</div>
+  <!-- Main Menu -->
+  <div id="main-menu" class="menu hidden">
+    <h2>Main Menu</h2>
+    <button id="player-mode-btn">Player Mode</button>
+    <button id="dm-mode-btn">DM Mode</button>
+    <button id="logout-btn">Logout</button>
+  </div>
 
-<div id="player-section" style="display:none;">
-  <h2>Player Character Sheet</h2>
-  <button id="load-character-btn">Load My Character</button>
-  <div id="character-sheet"></div>
-  <button id="back-to-menu-player">Back to Main Menu</button>
-</div>
+  <!-- Player Mode -->
+  <div id="player-menu" class="menu hidden">
+    <h2>Player Menu</h2>
+    <button id="roll-dice-btn">Dice Roller</button>
+    <button id="stat-roller-btn">Stat Roller</button>
+    <button id="view-character-btn">View Character Sheet</button>
+    <button id="back-main-btn">Back to Main Menu</button>
+    <div id="player-output" class="character"></div>
+  </div>
 
-<div id="dm-section" style="display:none;">
-  <h2>DM View</h2>
-  <button id="load-all-btn">Load All Characters</button>
-  <div id="all-sheets"></div>
-  <button id="back-to-menu-dm">Back to Main Menu</button>
-</div>
+  <!-- DM Mode -->
+  <div id="dm-menu" class="menu hidden">
+    <h2>DM Menu</h2>
+    <button id="view-all-characters-btn">View All Player Characters</button>
+    <button id="back-main-dm-btn">Back to Main Menu</button>
+    <div id="dm-output" class="character"></div>
+  </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// -------------------------
-// 1. Connect to Supabase
-// -------------------------
-const SUPABASE_URL = "https://ytinfowtmnvokbiageer.supabase.co"; // replace with your project URL
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0aW5mb3d0bW52b2tiaWFnZWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MjEyMzksImV4cCI6MjA4Nzk5NzIzOX0.HfAOOZInsu7-xx84AGp0NvOeCaYpNngRG0UKdQIj1Ao"; // replace with your anon key
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <script>
+    // ---- Supabase setup ----
+    const SUPABASE_URL = "YOUR_PROJECT_URL";  // <-- replace with your project URL
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // <-- replace with your anon key
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// -------------------------
-// 2. DOM Elements
-// -------------------------
-const loginSection = document.getElementById("login-section");
-const mainMenu = document.getElementById("main-menu");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const loginMsg = document.getElementById("login-msg");
-const welcomeMsg = document.getElementById("welcome-msg");
+    // ---- DOM elements ----
+    const authSection = document.getElementById("auth-section");
+    const mainMenu = document.getElementById("main-menu");
+    const playerMenu = document.getElementById("player-menu");
+    const dmMenu = document.getElementById("dm-menu");
+    const authMsg = document.getElementById("auth-msg");
+    const playerOutput = document.getElementById("player-output");
+    const dmOutput = document.getElementById("dm-output");
 
-const playerSection = document.getElementById("player-section");
-const characterDiv = document.getElementById("character-sheet");
+    // ---- Login/Register ----
+    document.getElementById("register-btn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      authMsg.innerText = error ? error.message : "Registered! Check your email to confirm.";
+    };
 
-const dmSection = document.getElementById("dm-section");
-const allSheetsDiv = document.getElementById("all-sheets");
+    document.getElementById("login-btn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        authMsg.innerText = error.message;
+      } else {
+        authSection.classList.add("hidden");
+        mainMenu.classList.remove("hidden");
+      }
+    };
 
-// -------------------------
-// 3. Login & Register
-// -------------------------
-document.getElementById("login-btn").onclick = async () => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: emailInput.value,
-    password: passwordInput.value
-  });
-  if (error) {
-    loginMsg.innerText = "Login failed: " + error.message;
-  } else {
-    loginMsg.innerText = "Login successful!";
-    showMainMenu(data.user);
-  }
-};
+    document.getElementById("logout-btn").onclick = async () => {
+      await supabase.auth.signOut();
+      mainMenu.classList.add("hidden");
+      authSection.classList.remove("hidden");
+    };
 
-document.getElementById("register-btn").onclick = async () => {
-  const { data, error } = await supabase.auth.signUp({
-    email: emailInput.value,
-    password: passwordInput.value
-  });
-  if (error) {
-    loginMsg.innerText = "Registration failed: " + error.message;
-  } else {
-    loginMsg.innerText = "Registered! Check your email to confirm.";
-  }
-};
+    // ---- Main Menu buttons ----
+    document.getElementById("player-mode-btn").onclick = () => {
+      mainMenu.classList.add("hidden");
+      playerMenu.classList.remove("hidden");
+    };
+    document.getElementById("dm-mode-btn").onclick = () => {
+      mainMenu.classList.add("hidden");
+      dmMenu.classList.remove("hidden");
+    };
 
-// -------------------------
-// 4. Show Main Menu
-// -------------------------
-function showMainMenu(user) {
-  loginSection.style.display = "none";
-  mainMenu.style.display = "block";
-  welcomeMsg.innerText = `Welcome, ${user.email}`;
-}
+    // ---- Back buttons ----
+    document.getElementById("back-main-btn").onclick = () => {
+      playerMenu.classList.add("hidden");
+      mainMenu.classList.remove("hidden");
+    };
+    document.getElementById("back-main-dm-btn").onclick = () => {
+      dmMenu.classList.add("hidden");
+      mainMenu.classList.remove("hidden");
+    };
 
-// -------------------------
-// 5. Logout
-// -------------------------
-document.getElementById("logout-btn").onclick = async () => {
-  await supabase.auth.signOut();
-  loginSection.style.display = "block";
-  mainMenu.style.display = "none";
-};
+    // ---- Player Menu ----
+    document.getElementById("roll-dice-btn").onclick = () => {
+      let dice = prompt("Enter dice to roll (e.g. 1d20 or 2d6+1d4):");
+      if (!dice) return;
+      let total = 0;
+      let rollsStr = "";
+      dice.replace(/\s+/g,"").split("+").forEach(group => {
+        const [count, sides] = group.split("d").map(x => x || 1);
+        for (let i=0;i<Number(count);i++){
+          const roll = Math.floor(Math.random()*Number(sides))+1;
+          total += roll;
+          rollsStr += roll + " ";
+        }
+      });
+      playerOutput.innerText = `Rolls: ${rollsStr}\nTotal: ${total}`;
+    };
 
-// -------------------------
-// 6. Player Mode
-// -------------------------
-document.getElementById("player-mode-btn").onclick = () => {
-  mainMenu.style.display = "none";
-  playerSection.style.display = "block";
-};
+    document.getElementById("stat-roller-btn").onclick = () => {
+      const stats = [];
+      for (let i=0;i<6;i++){
+        let rolls = [];
+        for (let j=0;j<4;j++){
+          rolls.push(Math.floor(Math.random()*6)+1);
+        }
+        rolls.sort((a,b)=>a-b);
+        stats.push(rolls[1]+rolls[2]+rolls[3]); // drop lowest
+      }
+      playerOutput.innerText = `Rolled stats: ${stats.join(", ")}`;
+    };
 
-document.getElementById("back-to-menu-player").onclick = () => {
-  playerSection.style.display = "none";
-  mainMenu.style.display = "block";
-};
+    document.getElementById("view-character-btn").onclick = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return playerOutput.innerText = "Please log in first.";
+      const { data, error } = await supabase.from("characters").select("*").eq("user_id", user.id).single();
+      if (error || !data) playerOutput.innerText = "No character found.";
+      else playerOutput.innerText = JSON.stringify(data, null, 2);
+    };
 
-// Load player's character
-document.getElementById("load-character-btn").onclick = async () => {
-  const user = supabase.auth.getUser();
-  const { data, error } = await supabase.from("characters").select("*").eq("user_id", (await user).data.user.id).single();
-  if (error) {
-    characterDiv.innerText = "No character sheet found.";
-  } else {
-    characterDiv.innerText = JSON.stringify(data, null, 2);
-  }
-};
+    // ---- DM Menu ----
+    document.getElementById("view-all-characters-btn").onclick = async () => {
+      const { data, error } = await supabase.from("characters").select("*");
+      if (error || !data) dmOutput.innerText = "No characters found.";
+      else dmOutput.innerText = JSON.stringify(data, null, 2);
+    };
 
-// -------------------------
-// 7. DM Mode
-// -------------------------
-document.getElementById("dm-mode-btn").onclick = () => {
-  mainMenu.style.display = "none";
-  dmSection.style.display = "block";
-};
-
-document.getElementById("back-to-menu-dm").onclick = () => {
-  dmSection.style.display = "none";
-  mainMenu.style.display = "block";
-};
-
-// Load all characters
-document.getElementById("load-all-btn").onclick = async () => {
-  const { data, error } = await supabase.from("characters").select("*");
-  if (error) {
-    allSheetsDiv.innerText = "Failed to load characters: " + error.message;
-  } else {
-    allSheetsDiv.innerText = JSON.stringify(data, null, 2);
-  }
-};
-</script>
+  </script>
 </body>
 </html>
